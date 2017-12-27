@@ -70,7 +70,7 @@ gf.NP_YOY <- function(TS,is1q=TRUE,filt=10000000,rm_neg=FALSE,src=c("all","fin")
   DBI::dbDisconnect(con)
   re <- merge.x(TS,re,by=c("date","stockID"))
   re <- transform(re, date=intdate2r(date))
-  
+
   # -- filtering
   if(rm_neg){
     re[!is.na(re$NP_LYCP) & re$NP_LYCP<filt, "factorscore"] <- NA
@@ -99,7 +99,7 @@ gf.NP_YOY <- function(TS,is1q=TRUE,filt=10000000,rm_neg=FALSE,src=c("all","fin")
 # -- by getTech_ts
 #' @rdname getfactor
 #' @export
-gf.pct_chg_per <- function(TS,N){
+gf.pct_chg_per <- function(TS,N=60){
   funchar <- paste("StockZf2(",N,")",sep="")
   getTech_ts(TS,funchar,varname="factorscore")
 }
@@ -533,7 +533,7 @@ TS.getFactor.db <- function(TS, subfun, ...){
 # ----- some examples -------------
 #' @rdname getfactor
 #' @export
-gf.F_NP_chg <- function(TS,span,con_type="1"){
+gf.F_NP_chg <- function(TS,span="w13",con_type="1"){
   # span: "w1","w4","w13","w26","w52"
   # con_type: one or more of 1,2,3,4
   subfun <- function(subTS,span,con_type){
@@ -545,9 +545,9 @@ gf.F_NP_chg <- function(TS,span,con_type="1"){
                   w26="c83",
                   w52="c84")
     qr_char <- paste("SELECT stock_code,con_date,con_type,",var,"
-                     FROM CON_FORECAST_STK a
-                     where a.con_date=",QT(dt),"and year(a.con_date)=a.rpt_date and a.stock_type=1 and con_type in (",con_type,")and a.rpt_type=4")
-    tmpdat <- queryAndClose.odbc(db.cs(),qr_char,as.is=1)
+      FROM CON_FORECAST_STK a
+        where a.con_date=",QT(dt),"and year(a.con_date)=a.rpt_date and a.stock_type=1 and con_type in (",con_type,")and a.rpt_type=4")
+  tmpdat <- queryAndClose.odbc(db.cs(),qr_char,as.is=1)
     subTS$stock_code <- stockID2tradeCode(subTS$stockID)
     re <- merge(subTS,tmpdat,by="stock_code",all.x=TRUE)
     re <- re[,c(names(TS),var)]
@@ -567,8 +567,8 @@ gf.F_PE <- function(TS,con_type="1"){
   subfun <- function(subTS,span,con_type){
     dt <- subTS[1,"date"]
     qr_char <- paste("SELECT stock_code,con_date,con_type,C5 as factorscore
-                     FROM CON_FORECAST_STK a
-                     where a.con_date=",QT(dt),"and year(a.con_date)=a.rpt_date and a.stock_type=1 and con_type in (",con_type,")and a.rpt_type=4")
+      FROM CON_FORECAST_STK a
+        where a.con_date=",QT(dt),"and year(a.con_date)=a.rpt_date and a.stock_type=1 and con_type in (",con_type,")and a.rpt_type=4")
     tmpdat <- queryAndClose.odbc(db.cs(),qr_char,as.is=1)
     subTS$stock_code <- stockID2tradeCode(subTS$stockID)
     re <- merge(subTS,tmpdat,by="stock_code",all.x=TRUE)
@@ -593,8 +593,8 @@ gf.F_ROE <- function(TS,con_type="1"){
   subfun <- function(subTS,span,con_type){
     dt <- subTS[1,"date"]
     qr_char <- paste("SELECT stock_code,con_date,con_type,C12 as factorscore
-                     FROM CON_FORECAST_STK a
-                     where a.con_date=",QT(dt),"and year(a.con_date)=a.rpt_date and a.stock_type=1 and con_type in (",con_type,")and a.rpt_type=4")
+      FROM CON_FORECAST_STK a
+        where a.con_date=",QT(dt),"and year(a.con_date)=a.rpt_date and a.stock_type=1 and con_type in (",con_type,")and a.rpt_type=4")
     tmpdat <- queryAndClose.odbc(db.cs(),qr_char,as.is=1)
     subTS$stock_code <- stockID2tradeCode(subTS$stockID)
     re <- merge(subTS,tmpdat,by="stock_code",all.x=TRUE)
@@ -608,7 +608,7 @@ gf.F_ROE <- function(TS,con_type="1"){
 
 #' @rdname getfactor
 #' @export
-gf.F_rank_chg <- function(TS,lag,con_type="1"){
+gf.F_rank_chg <- function(TS,lag=60,con_type="1"){
   # lag: integer,ginving the number of lag tradingdays
   # con_type: one or more of 1,2,3,4
   subfun <- function(subTS,lag,con_type){
@@ -616,10 +616,10 @@ gf.F_rank_chg <- function(TS,lag,con_type="1"){
     dt_lag <- trday.nearby(dt,by=-lag)
     qr_char <- paste(
       "SELECT a.stock_code,a.con_date,a.score,a.score_type,b.score as score_ref,b.score_type as score_type_ref,
-      a.score/(case when b.score=0 then NULL else b.score end)-1 as factorscore
-      FROM CON_FORECAST_SCHEDULE a, CON_FORECAST_SCHEDULE b
-      where a.con_date=",QT(dt),"and a.score_type in (",con_type,")
-      and b.con_date=",QT(dt_lag),"and b.stock_code=a.stock_code"
+              a.score/(case when b.score=0 then NULL else b.score end)-1 as factorscore
+        FROM CON_FORECAST_SCHEDULE a, CON_FORECAST_SCHEDULE b
+        where a.con_date=",QT(dt),"and a.score_type in (",con_type,")
+                     and b.con_date=",QT(dt_lag),"and b.stock_code=a.stock_code"
     )
     tmpdat <- queryAndClose.odbc(db.cs(),qr_char,as.is=1)
     subTS$stock_code <- stockID2tradeCode(subTS$stockID)
@@ -641,21 +641,20 @@ gf.F_target_rtn <- function(TS,con_type="1"){
     dt_int <- as.integer(as.character(dt,format="%Y%m%d"))
     qr_char <- paste(
       "SELECT a.stock_code,a.con_date,a.target_price,a.target_price_type,b.TCLOSE,
-      a.target_price/(case when b.TCLOSE=0 then NULL else b.TCLOSE end)-1 as factorscore
-      FROM CON_FORECAST_SCHEDULE a, GG_CHDQUOTE b
-      where a.con_date=",QT(dt),"and a.target_price_type in (",con_type,")
-      and b.TDATE=",dt_int,"and b.SYMBOL=a.stock_code"
-    )
+              a.target_price/(case when b.TCLOSE=0 then NULL else b.TCLOSE end)-1 as factorscore
+        FROM CON_FORECAST_SCHEDULE a, GG_CHDQUOTE b
+        where a.con_date=",QT(dt),"and a.target_price_type in (",con_type,")
+                     and b.TDATE=",dt_int,"and b.SYMBOL=a.stock_code"
+                      )
     tmpdat <- queryAndClose.odbc(db.cs(),qr_char,as.is=1)
     subTS$stock_code <- stockID2tradeCode(subTS$stockID)
     re <- merge(subTS,tmpdat,by="stock_code",all.x=TRUE)
-    #     re <- re[,c(names(TS),"factorscore")]
+#     re <- re[,c(names(TS),"factorscore")]
     return(re)
   }
   re <- TS.getFactor.db(TS,subfun,con_type=con_type)
   return(re)
 }
-
 
 
 
@@ -687,7 +686,7 @@ gf.liquidity <- function(TS,nwin=c(22,66,250),wgt=c(0.35,0.35,0.3),datasrc=defau
   
   variables <- c("volume","free_float_shares")
   rawdata <- andrew_rawdata_subfun(TS,max(nwin),variables,datasrc)
-
+  
   #process rawdata
   rawdata <- rawdata %>% dplyr::mutate(TurnoverRate=volume/(free_float_shares*1e4)) %>% 
     dplyr::filter(TurnoverRate>=0) %>% dplyr::select(-volume,-free_float_shares)
@@ -699,7 +698,7 @@ gf.liquidity <- function(TS,nwin=c(22,66,250),wgt=c(0.35,0.35,0.3),datasrc=defau
       dplyr::mutate(factorscore=RcppRoll::roll_sum(TurnoverRate,nwin[i],align = "right",fill=NA,na.rm = TRUE)) %>% 
       dplyr::ungroup() %>% dplyr::select(-TurnoverRate)
     TSF_ <- TSF_ %>% dplyr::filter(factorscore>0) %>% dplyr::mutate(stockID=as.character(stockID),factorscore=log(factorscore))
-
+    
     mTSF <- dplyr::left_join(mTSF,TSF_,by=c('date','stockID'))
   }
   
@@ -730,7 +729,7 @@ gf.ILLIQ <- function(TS,nwin=22,datasrc = defaultDataSRC()){
   #get rawdata
   variables <- c("pct_chg","amt")
   rawdata <- andrew_rawdata_subfun(TS,nwin,variables,datasrc)
-
+  
   #process rawdata
   rawdata <- rawdata %>% dplyr::filter(amt>0) %>% dplyr::mutate(ILLIQ=abs(pct_chg)/(amt/1e8)) %>% 
     dplyr::select(date,stockID,ILLIQ)
@@ -827,7 +826,7 @@ gf.IVR <- function(TS,nwin=22,datasrc=defaultDataSRC()){
   FF3 <- reshape2::dcast(FF3,date~stockID,value.var = 'pct_chg')
   FF3 <- transform(FF3,SMB=EI801813-EI801811,HML=EI801833-EI801831,market=EI801003)
   FF3 <- FF3[,c('date','SMB','HML','market')]
-
+  
   rawdata <- dplyr::left_join(rawdata,FF3,by='date')
   
   pb <- txtProgressBar(style = 3)
@@ -872,7 +871,7 @@ gf.disposition <- function(TS,nwin=66,datasrc=defaultDataSRC()){
   rawdata <- andrew_rawdata_subfun(TS,nwin,variables,datasrc)
   rawdata <- rawdata %>% dplyr::filter(free_float_shares>0) %>% dplyr::mutate(turnover=abs(volume/1e4)/free_float_shares) %>% 
     dplyr::select(date,stockID,RRclose,turnover)
-
+  
   pb <- txtProgressBar(style = 3)
   dates <- unique(TS$date)
   TSF <- data.frame()
@@ -901,10 +900,10 @@ gf.disposition <- function(TS,nwin=66,datasrc=defaultDataSRC()){
     #get wgt column  
     re <- re %>% dplyr::mutate(wgt = turnover*tmp) %>% dplyr::group_by(stockID) %>% 
       dplyr::mutate(wgt=wgt/sum(wgt))
-
+    
     TSF_ <- re %>% dplyr::summarise(factorscore=as.numeric(gain %*% wgt+loss %*% wgt)) %>% 
       dplyr::ungroup() %>% dplyr::mutate(date=dates[i],stockID=as.character(stockID))
-  
+    
     TSF <- rbind(TSF,TSF_)
     setTxtProgressBar(pb,i/length(dates))
   }
@@ -954,7 +953,9 @@ gf.High3Managers <- function(TS){
   TS_rpt <- na.omit(TS_rpt) # SOME DATA COULD NOT GET THE LATEST RPTDATE
   TSF <- merge.x(TS_rpt, dat_High3Managers, by = c("rptDate","stockID"))
   TSF <- TSF[,c("date","stockID","factorscore")]
+  TSF$factorscore <- log(1+TSF$factorscore) # log
   TSF_final <- merge.x(TS, TSF, by = c("date","stockID"))   # MAKE SURE NROW OF TSF IS THE SAME AS NROW OF TS
+  w.stop()
   return(TSF_final)
 }
 
@@ -1021,17 +1022,17 @@ gf.pio_f_score <- function(TS){
   TSF$score8 <- (dat$GrossMargin > dat_old$GrossMargin) + 0
   ### d(Asset Turnover ratio) > 0
   TSF$score9 <- (dat$AssetTurnoverRate > dat_old$AssetTurnoverRate) + 0
-  
+
   # output
   TSF$factorscore <- rowSums(dplyr::select(TSF,score1:score9),na.rm = TRUE)
   TSF <- dplyr::select(TSF,-dplyr::num_range("score", 1:9))
   return(TSF)
 }
 
-
 # ===================== xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ==============
 # ===================== to be tested  ===================
 # ===================== xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ==============
+
 #' @export
 gf.rotation_s <- function(TS){
   PB <- gf.PB_mrq(TS)$factorscore
