@@ -40,9 +40,6 @@
 \alias{gf.GG_OR_Q}
 \alias{gf.stable_growth}
 \alias{gf.F_NP_chg}
-\alias{gf.F_PE}
-\alias{gf.ln_F_PE}
-\alias{gf.F_ROE}
 \alias{gf.F_rank_chg}
 \alias{gf.F_target_rtn}
 \alias{gf.liquidity}
@@ -132,12 +129,6 @@ gf.GG_OR_Q(TS, filt = 1e+08)
 gf.stable_growth(TS, N = 12, freq = "q", stat = "mean/sd", rm_N = 6)
 
 gf.F_NP_chg(TS, span = "w13", con_type = "1")
-
-gf.F_PE(TS, con_type = "1")
-
-gf.ln_F_PE(TS, con_type = "1")
-
-gf.F_ROE(TS, con_type = "1")
 
 gf.F_rank_chg(TS, lag = 60, con_type = "1")
 

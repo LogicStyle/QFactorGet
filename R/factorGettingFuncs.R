@@ -612,52 +612,6 @@ gf.F_NP_chg <- function(TS,span="w13",con_type="1"){
 
 
 
-#' @rdname getfactor
-#' @export
-gf.F_PE <- function(TS,con_type="1"){
-  # con_type: one or more of 1,2,3,4
-  subfun <- function(subTS,span,con_type){
-    dt <- subTS[1,"date"]
-    qr_char <- paste("SELECT stock_code,con_date,con_eps_type as con_type,con_pe as factorscore
-                     FROM con_forecast_stk a
-                     where a.con_date=",QT(dt),"and year(a.con_date)=a.con_year and con_eps_type in (",con_type,")")
-    tmpdat <- queryAndClose.odbc(db.cs(),qr_char,as.is=1)
-    tmpdat$con_date <- as.Date(tmpdat$con_date)
-    subTS$stock_code <- stockID2tradeCode(subTS$stockID)
-    re <- merge(subTS,tmpdat,by="stock_code",all.x=TRUE)
-    return(re)
-  }
-  re <- TS.getFactor.db(TS,subfun,span=span,con_type=con_type)
-  re$factorscore <- ifelse(re$factorscore<=0,NA,re$factorscore)
-  return(re)
-}
-#' @rdname getfactor
-#' @export
-gf.ln_F_PE <- function(TS,con_type="1"){
-  re <- gf.F_PE(TS,con_type = con_type)
-  re$factorscore <- ifelse(re$factorscore<0.001,NA,log(re$factorscore))
-  return(re)
-}
-
-#' @rdname getfactor
-#' @export
-gf.F_ROE <- function(TS,con_type="1"){
-  # con_type: one or more of 1,2,3,4
-  subfun <- function(subTS,span,con_type){
-    dt <- subTS[1,"date"]
-    qr_char <- paste("SELECT stock_code,con_date,con_eps_type as con_type,con_roe/100 as factorscore
-                     FROM con_forecast_stk a
-                     where a.con_date=",QT(dt),"and year(a.con_date)=a.con_year and con_eps_type in (",con_type,")")
-    tmpdat <- queryAndClose.odbc(db.cs(),qr_char,as.is=1)
-    tmpdat$con_date <- as.Date(tmpdat$con_date)
-    subTS$stock_code <- stockID2tradeCode(subTS$stockID)
-    re <- merge(subTS,tmpdat,by="stock_code",all.x=TRUE)
-    return(re)
-  }
-  re <- TS.getFactor.db(TS,subfun,span=span,con_type=con_type)
-  return(re)
-}
-
 
 
 
